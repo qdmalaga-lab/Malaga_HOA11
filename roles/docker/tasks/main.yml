@@ -1,0 +1,26 @@
+---
+- name: install docker and the python docker library
+  apt:
+    name:
+      - docker.io
+      - python3-docker
+    state: present
+    update_cache: yes
+
+- name: enable and start the docker socket
+  systemd:
+    name: docker.socket
+    state: started
+    enabled: yes
+
+- name: enable and start the docker service
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: add the ansible user to the docker group
+  user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: yes

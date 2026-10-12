@@ -1,0 +1,54 @@
+---
+- name: create the docker build directory
+  file:
+    path: /opt/webdb
+    state: directory
+    mode: 0755
+
+- name: copy the docker build context
+  copy:
+    src: "{{ item }}"
+    dest: "/opt/webdb/{{ item }}"
+    mode: 0644
+  loop:
+    - Dockerfile
+    - entrypoint.sh
+    - index.html
+  register: webdb_context
+
+- name: build the webdb image
+  community.docker.docker_image:
+    name: webdb
+    tag: latest
+    source: build
+    build:
+      path: /opt/webdb
+      pull: yes
+    force_source: "{{ webdb_context is changed }}"
+    state: present
+
+- name: run the webdb container
+  community.docker.docker_container:
+    name: webdb
+    image: webdb:latest
+    state: started
+    restart_policy: unless-stopped
+    published_ports:
+      - "8080:80"
+
+- name: wait for the web server in the container
+  uri:
+    url: http://localhost:8080
+    status_code: 200
+  register: web_check
+  retries: 10
+  delay: 3
+  until: web_check.status == 200
+
+- name: wait for the database server in the container
+  command: docker exec webdb mysqladmin ping
+  register: db_check
+  retries: 15
+  delay: 3
+  until: db_check.rc == 0
+  changed_when: false

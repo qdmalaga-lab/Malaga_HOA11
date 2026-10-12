@@ -1,0 +1,6 @@
+---
+- hosts: docker_hosts
+  become: true
+  roles:
+    - docker
+    - webdb_image
